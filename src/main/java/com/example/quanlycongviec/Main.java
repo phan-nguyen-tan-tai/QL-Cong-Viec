@@ -3,12 +3,14 @@ package com.example.quanlycongviec;
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 import java.io.BufferedReader;
@@ -92,9 +94,14 @@ public class Main extends Application {
         imageView.fitHeightProperty().bind(scene.heightProperty());
 
         // === Font responsive ===
+        titleLabel.setMaxWidth(Double.MAX_VALUE);
+        titleLabel.setAlignment(Pos.CENTER);
+        titleLabel.setTextAlignment(TextAlignment.CENTER);
         titleLabel.styleProperty().bind(Bindings.concat(
-                "-fx-font-size: ", scene.widthProperty().divide(25), "px; -fx-text-fill: darkblue; -fx-font-weight: bold;"
+                "-fx-font-size: ", scene.widthProperty().divide(25),
+                "px; -fx-text-fill: black; -fx-font-weight: bold; -fx-font-family: 'Times New Roman';"
         ));
+
         phoneLabel.styleProperty().bind(Bindings.concat("-fx-font-size: ", scene.widthProperty().divide(35), "px;"));
         passwordLabel.styleProperty().bind(Bindings.concat("-fx-font-size: ", scene.widthProperty().divide(35), "px;"));
 

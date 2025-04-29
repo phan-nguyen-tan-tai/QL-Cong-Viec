@@ -36,12 +36,14 @@ public class HomeWindow {
     private VBox clockBox;
     private Canvas analogClockCanvas;
     private StackPane rootContainer = new StackPane();
+    private VBox mainToolbar;
+    private BorderPane mainLayout;
 
     public void show() {
         Stage stage = new Stage();
         stage.initStyle(StageStyle.DECORATED);
 
-        // Label ngày tháng năm
+        // Ngày tháng hiện tại
         Label dateLabel = new Label();
         dateLabel.setTextFill(Color.LIGHTYELLOW);
         dateLabel.setFont(Font.font("Times New Roman", 22));
@@ -56,7 +58,7 @@ public class HomeWindow {
         dateTimeline.setCycleCount(Timeline.INDEFINITE);
         dateTimeline.play();
 
-        // Đồng hồ điện tử
+        // Đồng hồ số
         Label digitalClockLabel = new Label();
         digitalClockLabel.setTextFill(Color.WHITE);
         digitalClockLabel.fontProperty().bind(Bindings.createObjectBinding(() -> {
@@ -64,71 +66,158 @@ public class HomeWindow {
             return new Font("Seven Segment", fontSize);
         }, stage.widthProperty()));
 
-        // Đồng hồ cơ
+        // Đồng hồ kim
         analogClockCanvas = new Canvas();
         StackPane analogClockWrapper = new StackPane(analogClockCanvas);
         analogClockWrapper.setPrefSize(300, 300);
         analogClockCanvas.widthProperty().bind(analogClockWrapper.widthProperty());
         analogClockCanvas.heightProperty().bind(analogClockWrapper.heightProperty());
 
-        Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+        Timeline clockTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             updateDigitalClock(digitalClockLabel);
             drawAnalogClock();
         }));
-        timeline.setCycleCount(Timeline.INDEFINITE);
-        timeline.play();
+        clockTimeline.setCycleCount(Timeline.INDEFINITE);
+        clockTimeline.play();
 
-        // Clock layout gồm: ngày + analog + digital
         clockBox = new VBox(10, dateLabel, analogClockWrapper, digitalClockLabel);
         clockBox.setAlignment(Pos.CENTER);
         clockBox.setPadding(new Insets(20));
 
+        // Background tự động đổi theo giờ
         updateBackgroundByTime();
-        Timeline backgroundUpdater = new Timeline(new KeyFrame(Duration.minutes(5), e -> updateBackgroundByTime()));
-        backgroundUpdater.setCycleCount(Timeline.INDEFINITE);
-        backgroundUpdater.play();
+        Timeline backgroundTimeline = new Timeline(new KeyFrame(Duration.minutes(5), e -> updateBackgroundByTime()));
+        backgroundTimeline.setCycleCount(Timeline.INDEFINITE);
+        backgroundTimeline.play();
 
-        // Nút chức năng
-        Button btnHenGio = new Button("Hẹn giờ");
-        Button btnXemLich = new Button("Xem lịch");
-        Button btnLichTrongNgay = new Button("Lịch trong ngày");
-        Button btnThoiKhoaBieu = new Button("Thời khoá biểu");
+        // Các nút chức năng chính
+        Button btnHenGio = createMainButton("Hẹn giờ");
+        Button btnXemLich = createMainButton("Xem lịch");
+        Button btnLichTrongNgay = createMainButton("Lịch trong ngày");
+        Button btnThoiKhoaBieu = createMainButton("Thời khoá biểu");
 
-        Font buttonFont = new Font(16);
-        Button[] buttons = {btnHenGio, btnXemLich, btnLichTrongNgay, btnThoiKhoaBieu};
-        for (Button btn : buttons) {
-            btn.setFont(buttonFont);
-            btn.setPrefHeight(60);
-            btn.setMaxWidth(Double.MAX_VALUE);
-            VBox.setVgrow(btn, Priority.ALWAYS);
-        }
+        mainToolbar = new VBox(20, btnHenGio, btnXemLich, btnLichTrongNgay, btnThoiKhoaBieu);
+        mainToolbar.setAlignment(Pos.CENTER);
+        mainToolbar.setPadding(new Insets(20));
+        mainToolbar.setPrefWidth(200);
+        mainToolbar.setStyle("-fx-background-color: #e6f7ff;");
 
-        VBox rightBox = new VBox(20, btnHenGio, btnXemLich, btnLichTrongNgay, btnThoiKhoaBieu);
-        rightBox.setAlignment(Pos.CENTER);
-        rightBox.setPadding(new Insets(20));
-        rightBox.setPrefWidth(200);
-        rightBox.setStyle("-fx-background-color: #e6f7ff;");
-
-        // Layout tổng
-        BorderPane mainLayout = new BorderPane();
+        mainLayout = new BorderPane();
         rootContainer.getChildren().add(clockBox);
         mainLayout.setCenter(rootContainer);
-        mainLayout.setRight(rightBox);
+        mainLayout.setRight(mainToolbar);
 
-        Scene scene = new Scene(mainLayout, 700, 500);
+        Scene scene = new Scene(mainLayout, 800, 600);
         stage.setScene(scene);
-        stage.setTitle("Giao diện chính");
+        stage.setTitle("Quản lý thời gian");
 
         analogClockCanvas.widthProperty().addListener((obs, oldVal, newVal) -> drawAnalogClock());
         analogClockCanvas.heightProperty().addListener((obs, oldVal, newVal) -> drawAnalogClock());
 
-        // Sự kiện nút
-        btnHenGio.setOnAction(e -> switchToView(new HenGioView(() -> switchToView(clockBox))));
-        btnXemLich.setOnAction(e -> switchToView(new XemLichView(() -> switchToView(clockBox))));
-        btnLichTrongNgay.setOnAction(e -> switchToView(new LichTrongNgayView(() -> switchToView(clockBox))));
-        btnThoiKhoaBieu.setOnAction(e -> switchToView(new ThoiKhoaBieuView(() -> switchToView(clockBox))));
+        // Sự kiện bấm các nút chức năng
+        btnHenGio.setOnAction(e -> {
+            HenGioView henGioView = new HenGioView(this::switchToMainView);
+            switchToView(henGioView, makeSubToolbarForHenGio(henGioView));
+        });
+
+        btnXemLich.setOnAction(e -> {
+            XemLichView xemLichView = new XemLichView(this::switchToMainView);
+            switchToView(xemLichView, makeSubToolbarForXemLich(xemLichView));
+        });
+
+        btnLichTrongNgay.setOnAction(e -> {
+            LichTrongNgayView lichTrongNgayView = new LichTrongNgayView(this::switchToMainView);
+            switchToView(lichTrongNgayView, makeSubToolbarForLichTrongNgay(lichTrongNgayView));
+        });
+
+        btnThoiKhoaBieu.setOnAction(e -> {
+            ThoiKhoaBieuView thoiKhoaBieuView = new ThoiKhoaBieuView(this::switchToMainView);
+            switchToView(thoiKhoaBieuView, makeSubToolbarForThoiKhoaBieu(thoiKhoaBieuView));
+        });
 
         stage.show();
+    }
+
+    private void switchToMainView() {
+        switchToView(clockBox, mainToolbar);
+    }
+
+    private void switchToView(Node newView, VBox newToolbar) {
+        if (!rootContainer.getChildren().isEmpty()) {
+            Node oldView = rootContainer.getChildren().get(0);
+            FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.5), oldView);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+            fadeOut.setOnFinished(event -> {
+                rootContainer.getChildren().setAll(newView);
+                FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.5), newView);
+                fadeIn.setFromValue(0.0);
+                fadeIn.setToValue(1.0);
+                fadeIn.play();
+            });
+            fadeOut.play();
+        } else {
+            rootContainer.getChildren().setAll(newView);
+        }
+        mainLayout.setRight(newToolbar);
+    }
+
+    private Button createMainButton(String text) {
+        Button btn = new Button(text);
+        btn.setFont(new Font(16));
+        btn.setPrefHeight(60);
+        btn.setMaxWidth(Double.MAX_VALUE);
+        VBox.setVgrow(btn, Priority.ALWAYS);
+        return btn;
+    }
+
+    private VBox makeSubToolbarForHenGio(HenGioView view) {
+        Button btn1 = createSubButton("Hẹn giờ", view::showHenGio);
+        Button btn2 = createSubButton("Danh sách hẹn giờ", view::showDanhSach);
+        Button btn3 = createSubButton("Lưu", view::showLuu);
+        Button btn4 = createSubButton("Xoá", view::showXoa);
+        return styleSubToolbar(btn1, btn2, btn3, btn4);
+    }
+
+    private VBox makeSubToolbarForXemLich(XemLichView view) {
+        Button btn1 = createSubButton("Lịch dương", view::showLichDuong);
+        Button btn2 = createSubButton("Lịch âm", view::showLichAm);
+        Button btn3 = createSubButton("Sự kiện trong năm", view::showSuKienNam);
+        return styleSubToolbar(btn1, btn2, btn3);
+    }
+
+    private VBox makeSubToolbarForLichTrongNgay(LichTrongNgayView view) {
+        Button btn1 = createSubButton("Lịch trình", view::showLichTrongNgay);
+        Button btn2 = createSubButton("Sửa", view::showSua);
+        Button btn3 = createSubButton("Lưu", view::showLuu);
+        Button btn4 = createSubButton("Xoá", view::showXoa);
+        return styleSubToolbar(btn1, btn2, btn3, btn4);
+    }
+
+    private VBox makeSubToolbarForThoiKhoaBieu(ThoiKhoaBieuView view) {
+        Button btn1 = createSubButton("Thời khoá biểu", view::showThoiKhoaBieu);
+        Button btn2 = createSubButton("Sửa", view::showSua);
+        Button btn3 = createSubButton("Lưu", view::showLuu);
+        Button btn4 = createSubButton("Xoá", view::showXoa);
+        return styleSubToolbar(btn1, btn2, btn3, btn4);
+    }
+
+    private Button createSubButton(String text, Runnable action) {
+        Button btn = new Button(text);
+        btn.setFont(new Font(15));
+        btn.setPrefHeight(45);
+        btn.setMaxWidth(Double.MAX_VALUE);
+        btn.setOnAction(e -> action.run());
+        return btn;
+    }
+
+    private VBox styleSubToolbar(Button... buttons) {
+        VBox box = new VBox(15, buttons);
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(20));
+        box.setPrefWidth(200);
+        box.setStyle("-fx-background-color: #f0f0f0;");
+        return box;
     }
 
     private void updateDigitalClock(Label label) {
@@ -150,32 +239,14 @@ public class HomeWindow {
         gc.setLineWidth(3);
         gc.strokeOval(centerX - radius, centerY - radius, radius * 2, radius * 2);
 
-        for (int i = 0; i < 60; i++) {
-            double angle = Math.toRadians(i * 6);
-            double inner = (i % 5 == 0) ? radius - 15 : radius - 8;
-            double outer = radius;
-            double x1 = centerX + inner * Math.cos(angle);
-            double y1 = centerY + inner * Math.sin(angle);
-            double x2 = centerX + outer * Math.cos(angle);
-            double y2 = centerY + outer * Math.sin(angle);
-            gc.setStroke(i % 5 == 0 ? Color.BLACK : Color.GRAY);
-            gc.setLineWidth(i % 5 == 0 ? 2 : 1);
-            gc.strokeLine(x1, y1, x2, y2);
-        }
-
-        gc.setFill(Color.BLACK);
-        gc.setFont(new Font("Arial", radius * 0.12));
-        double textRadius = radius - 23;
-
-        drawCenteredText(gc, "12", centerX, centerY - textRadius);
-        drawCenteredText(gc, "3", centerX + textRadius, centerY);
-        drawCenteredText(gc, "6", centerX, centerY + textRadius);
-        drawCenteredText(gc, "9", centerX - textRadius, centerY);
-
         LocalTime now = LocalTime.now();
-        double second = now.getSecond();
-        double minute = now.getMinute() + second / 60.0;
-        double hour = now.getHour() % 12 + minute / 60.0;
+        drawClockHands(gc, centerX, centerY, radius, now);
+    }
+
+    private void drawClockHands(GraphicsContext gc, double centerX, double centerY, double radius, LocalTime time) {
+        double second = time.getSecond();
+        double minute = time.getMinute() + second / 60.0;
+        double hour = time.getHour() % 12 + minute / 60.0;
 
         drawHand(gc, centerX, centerY, hour * 30, radius * 0.5, 5, Color.BLACK);
         drawHand(gc, centerX, centerY, minute * 6, radius * 0.7, 3, Color.DARKBLUE);
@@ -185,8 +256,7 @@ public class HomeWindow {
         gc.fillOval(centerX - 4, centerY - 4, 8, 8);
     }
 
-    private void drawHand(GraphicsContext gc, double cx, double cy, double angleDeg,
-                          double length, double width, Color color) {
+    private void drawHand(GraphicsContext gc, double cx, double cy, double angleDeg, double length, double width, Color color) {
         double angleRad = Math.toRadians(angleDeg - 90);
         double x = cx + length * Math.cos(angleRad);
         double y = cy + length * Math.sin(angleRad);
@@ -195,15 +265,7 @@ public class HomeWindow {
         gc.strokeLine(cx, cy, x, y);
     }
 
-    private void drawCenteredText(GraphicsContext gc, String text, double x, double y) {
-        Text helper = new Text(text);
-        helper.setFont(gc.getFont());
-        double width = helper.getLayoutBounds().getWidth();
-        double height = helper.getLayoutBounds().getHeight();
-        gc.fillText(text, x - width / 2, y + height / 4);
-    }
-
-    private void updateBackgroundByTime() {
+private void updateBackgroundByTime() {
         LocalTime now = LocalTime.now();
         int hour = now.getHour();
         String imagePath;
@@ -232,29 +294,6 @@ public class HomeWindow {
             clockBox.setBackground(new Background(bg));
         } catch (Exception e) {
             System.out.println("Không thể tải ảnh nền: " + imagePath);
-        }
-    }
-
-    private void switchToView(Node newView) {
-        if (!rootContainer.getChildren().isEmpty()) {
-            Node oldView = rootContainer.getChildren().get(0);
-
-            FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.5), oldView);
-            fadeOut.setFromValue(1.0);
-            fadeOut.setToValue(0.0);
-
-            fadeOut.setOnFinished(event -> {
-                rootContainer.getChildren().setAll(newView);
-
-                FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.5), newView);
-                fadeIn.setFromValue(0.0);
-                fadeIn.setToValue(1.0);
-                fadeIn.play();
-            });
-
-            fadeOut.play();
-        } else {
-            rootContainer.getChildren().setAll(newView);
         }
     }
 }
